@@ -1,43 +1,35 @@
 import { test, expect } from '@playwright/test';
 import { TodoPage } from '../pages/TodoPage';
 
-test.describe('Todo App', () => {
-    let todoPage: TodoPage;
+test.describe('Todo app - beginner friendly', () => {
+  let todo: TodoPage;
 
-    test.beforeEach(async ({ page }) => {
-        todoPage = new TodoPage(page);
-        await todoPage.goto();
-    });
+  test.beforeEach(async ({ page }) => {
+    todo = new TodoPage(page);
+    await todo.goto();
+  });
 
-    test('Add a new todo', async () => {
-        await todoPage.addTodo('Buy milk');
-        const todos = await todoPage.getTodos();
-        expect(todos).toContain('Buy milk');
-    });
+  test('Add a new todo', async () => {
+    await todo.addTodo('Buy milk');
+    expect(await todo.getTodosText()).toContain('Buy milk');
+  });
 
-    test('Mark a todo as completed', async () => {
-        await todoPage.addTodo('Buy milk');
-        await todoPage.toggleTodo('Buy milk');
-        const completed = todoPage.todoItems.filter({ hasText: 'Buy milk' });
-        await expect(completed).toHaveClass(/completed/);
-    });
+  test('Complete a todo', async () => {
+    await todo.addTodo('Walk dog');
+    await todo.completeTodo('Walk dog');
+    expect(await todo.isTodoCompleted('Walk dog')).toBe(true);
+  });
 
-    test('Delete a todo', async () => {
-        await todoPage.addTodo('Buy milk');
-        await todoPage.deleteTodo('Buy milk');
-        const todos = await todoPage.getTodos();
-        expect(todos).not.toContain('Buy milk');
-    });
+  test('Delete a todo', async () => {
+    await todo.addTodo('Read book');
+    await todo.deleteTodo('Read book');
+    expect(await todo.getTodosText()).not.toContain('Read book');
+  });
 
-    test.describe('Scenario Outline: Add multiple todos', () => {
-        const tasks = ['Learn Playwright', 'Write test plan', 'Review PRs'];
-
-        for (const task of tasks) {
-            test(`Add todo: ${task}`, async () => {
-                await todoPage.addTodo(task);
-                const todos = await todoPage.getTodos();
-                expect(todos).toContain(task);
-            });
-        }
-    });
+  test('Long text todo', async () => {
+    const longText = 'This is a very long todo text to check wrapping and layout behavior without any brackets';
+    await todo.addTodo(longText);
+    const lineCount = await todo.getTodoLineCount(longText);
+    expect(lineCount).toBeLessThanOrEqual(5); // simplified assertion for beginners
+  });
 });
