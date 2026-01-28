@@ -1,46 +1,56 @@
-import { Page } from '@playwright/test';
+import { Page, Locator } from '@playwright/test';
 
 export class TodoPage {
   readonly page: Page;
+  readonly todoInput: Locator;
+  readonly todoList: Locator;
 
   constructor(page: Page) {
     this.page = page;
+    this.todoInput = page.locator('.new-todo'); // input box to add new todos
+    this.todoList = page.locator('.todo-list li'); // list of todo items
   }
 
+  // Open the Todo app
   async goto() {
     await this.page.goto('http://localhost:8080/todo');
   }
 
-  async addTodo(todoText: string) {
-    await this.page.fill('.new-todo', todoText);
-    await this.page.press('.new-todo', 'Enter');
+  // Add a new todo item
+  async addTodo(text: string) {
+    await this.todoInput.fill(text);
+    await this.todoInput.press('Enter');
   }
 
+  // Get all todo text as an array
   async getTodosText(): Promise<string[]> {
-    return this.page.locator('.todo-list li label').allTextContents();
+    return await this.todoList.allTextContents();
   }
 
-  async completeTodo(todoText: string) {
-    const todo = this.page.locator(`.todo-list li:has-text("${todoText}") .toggle`);
-    await todo.check();
+  // Mark a todo as completed
+  async completeTodo(text: string) {
+    const todo = this.todoList.filter({ hasText: text });
+    await todo.locator('.toggle').check();
   }
 
-  async isTodoCompleted(todoText: string): Promise<boolean> {
-    const todo = this.page.locator(`.todo-list li:has-text("${todoText}")`);
-    return await todo.getAttribute('class').then(cls => cls?.includes('completed') ?? false);
+  // Check if a todo is completed
+  async isTodoCompleted(text: string): Promise<boolean> {
+    const todo = this.todoList.filter({ hasText: text });
+    return await todo.locator('input.toggle').isChecked();
   }
 
-  async deleteTodo(todoText: string) {
-    const todo = this.page.locator(`.todo-list li:has-text("${todoText}")`);
+  // Delete a todo
+  async deleteTodo(text: string) {
+    const todo = this.todoList.filter({ hasText: text });
     await todo.hover();
     await todo.locator('.destroy').click();
   }
 
-  async getTodoLineCount(todoText: string): Promise<number> {
-    const element = this.page.locator(`.todo-list li:has-text("${todoText}") label`);
-    const box = await element.boundingBox();
-    if (!box) return 0;
-    const lineHeight = 20; // approximate line height in pixels
-    return Math.round(box.height / lineHeight);
+  // Count how many lines the todo text takes 
+  async getTodoLineCount(text: string): Promise<number> {
+    const todo = this.todoList.filter({ hasText: text });
+    const height = await todo.evaluate(el => el.clientHeight);
+    const lineHeight = await todo.evaluate(el => parseInt(window.getComputedStyle(el).lineHeight));
+    return Math.round(height / lineHeight);
   }
 }
